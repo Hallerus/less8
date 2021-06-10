@@ -1,9 +1,37 @@
 ---
+- name: install tomcat9
+  hosts: db
+  become: yes
+
+  tasks:
+  
+  - name: Update and upgrade apt packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+    
+  - name: Enshure tomcat9 package is present
+    apk:
+      name: tomcat9
+      state: present
+
+  - name: Enshure tomcat service is started
+    service:
+      name: tomcat
+      state: started
+
+
 - name: install OpenJdk, Maven
   hosts: web
   become: yes
 
   tasks:
+
+  - name: Update and upgrade apt packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+
   - name: Ensure Openjdk package is present
     apt: 
       name: OpenJdk-11-jdk
@@ -22,3 +50,10 @@
   - name: building WAR file in Maven
     shell:
       command: mvn -f /tmp/boxfuse-sample-java-war-hello/pom.xml package
+
+  - name: copy artifact to prod machine
+    synchronize:
+      mode: pull
+      src: /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
+      dest: /var/lib/tomcat9/webapps/
+    delegate_to: db
