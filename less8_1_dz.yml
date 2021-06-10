@@ -57,7 +57,7 @@
       daemon_reload: true
 
 
-- name: install OpenJdk, Maven
+- name: install Maven, copy Artifact to Prod
   hosts: web
   become: yes
 
@@ -81,9 +81,9 @@
     shell: mvn --file /tmp/boxfuse-sample-java-war-hello/pom.xml package
 
   - name: copy artifact to prod machine
-    become: yes
     synchronize:
-      mode: pull
+      mode: pull      
       src: /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
       dest: /opt/tomcat/webapps/
     delegate_to: 34.136.36.44
+
