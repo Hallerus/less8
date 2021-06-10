@@ -4,17 +4,23 @@
   become: yes
 
   tasks:
-  
-  - name: Update and upgrade apt packages
-    apt:
-      upgrade: yes
-      update_cache: yes
 
-  - name: Ensure Openjdk package is present
-    apt: 
+  - name: Enshure JDK 11 package is present
+    apt:
       name: openjdk-11-jdk
       state: present
-    
+
+  - name: add tomcat group
+    group:
+      name: tomcat
+
+  - name: add tomcat user
+    user:
+      name: tomcat
+      group: tomcat
+      home: /user/share/tomcat
+      createhome: no
+
   - name: create /opt/tomcat directory
     file:
       path: /opt/tomcat
@@ -28,8 +34,20 @@
       remote_src: yes
       extra_opts: [--strip-components=1]
 
-  - name: start tomcat
-    script: "/opt/tomcat/bin/catalina.sh start"
+  - name: Change ownership
+    file:
+      path: /opt/tomcat
+      owner: tomcat
+      group: tomcat
+      mode: "u+rwx,g+rx,o=rx"
+      recurse: yes
+      state: directory      
+
+  - name: Copy Tomcat service from local to remote
+    copy:
+       src: tomcat.service
+       dest: /etc/systemd/system/
+       mode: 0755
 
   - name: Start and enable Tomcat service
     systemd:
@@ -44,11 +62,10 @@
   become: yes
 
   tasks:
-
+  
   - name: Update and upgrade apt packages
     apt:
-      upgrade: yes
-      update_cache: yes
+      upgrade: dist
   
   - name: Ensure Maven package is present
     apt:
@@ -58,15 +75,15 @@
   - name: downloading the repository from GitHub
     git:
       repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
-      dest: /tmp/
+      dest: /tmp/boxfuse-sample-java-war-hello
 
   - name: building WAR file in Maven
-    shell:
-      command: mvn -f /tmp/boxfuse-sample-java-war-hello/pom.xml package
+    shell: mvn --file /tmp/boxfuse-sample-java-war-hello/pom.xml package
 
   - name: copy artifact to prod machine
+    become: yes
     synchronize:
       mode: pull
       src: /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
       dest: /opt/tomcat/webapps/
-    delegate_to: db
+    delegate_to: 34.136.36.44
